@@ -1,0 +1,7 @@
+.venv/
+build/
+dist/
+__pycache__/
+*.pyc
+build_audit.txt
+diagnose.txt

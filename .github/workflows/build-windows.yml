@@ -1,0 +1,40 @@
+name: Build Windows exe
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Build
+        run: pyinstaller --noconfirm --clean DEMMerge.spec
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\DEMMerge\DEMMerge.exe -ArgumentList "--selftest" -Wait -PassThru
+          Get-Content dist\DEMMerge\selftest.log
+          if ($p.ExitCode -ne 0) { exit 1 }
+          Remove-Item dist\DEMMerge\selftest.log
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist\DEMMerge -DestinationPath DEMMerge-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DEMMerge-windows-x64
+          path: DEMMerge-windows-x64.zip
+      - name: Attach to release (tag builds)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DEMMerge-windows-x64.zip
